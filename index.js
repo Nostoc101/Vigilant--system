@@ -5,7 +5,7 @@ const readline = require("readline");
 
 const OWNER = 'NOSTOC'
 const PREFIX = '.'
-const BOT_NAME = 'VIGILANT SYSTEM V7'
+const BOT_NAME = 'VIGILANT SYSTEM'
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 const question = (text) => new Promise((resolve) => rl.question(text, resolve))
