@@ -7,6 +7,7 @@ let txt=`╭━≫〖 *VIGILANT BUG MENU* 〗≪━╮
 │.delay.lag.crash.invis
 │.bugdoc.bugvc.bugpair.location
 │.spam.jitter.freeze.gcbug
+│.port.null.void.bomb.toxic.destroy
 ╰━━━━━━━━━━━━〣`;
 await s.sendMessage(f,{text:txt},{quoted:m})
 }}
