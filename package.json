@@ -1,0 +1,12 @@
+{
+  "name": "vigilant-system",
+  "version": "7.0.0",
+  "description": "VIGILANT SYSTEM BY NOSTOC",
+  "main": "index.js",
+  "scripts": { "start": "node index.js" },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.8",
+    "axios": "^1.6.7",
+    "pino": "^8.17.2"
+  }
+}
