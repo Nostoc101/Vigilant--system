@@ -1,17 +1,17 @@
 {
   "name": "vigilant-system",
-  "version": "7.0.0",
-  "description": "Vigilant WhatsApp Bot with Bug Menu",
+  "version": "1.0.0",
+  "description": "Vigilant WhatsApp Bot V6 with Bug Menu",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^7.0.0",
+    "@whiskeysockets/baileys": "^6.7.8",
     "express": "^4.18.2",
     "qrcode": "^1.5.3"
   },
   "engines": {
     "node": "18.x"
   }
-}
+  }
