@@ -117,7 +117,7 @@ async function startBot() {
     auth: state,
     browser: [BOT_NAME, "Desktop", VERSION],
     printQRInTerminal: false,
-    logger: logger: pino({ level: 'silent' })
+    logger: pino({ level: 'silent' })
     sock.ev.on('creds.update', saveCreds);
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
