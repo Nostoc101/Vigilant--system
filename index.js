@@ -153,13 +153,6 @@ async function startBot() {
     await loadCommands();
     console.log(`> V7 ULTIMATE: Loaded ${commands.size} modules`);
     startBot();
-});
-sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect } = update
-    if(connection === 'close') {
-        console.log('> Bot disconnected. Reconnecting in 5s...')
-        setTimeout(() => {
-            startBot()
-        }, 5000)
-    }
+}));
+
 })
