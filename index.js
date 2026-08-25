@@ -23,7 +23,6 @@ const THEME = {
     prefix: `[NOSTOC://V7]`,
     line: `----------------------------------------`
 };
-
 const app = express();    
 }
 
