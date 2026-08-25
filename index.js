@@ -154,18 +154,12 @@ async function startBot() {
     console.log(`> V7 ULTIMATE: Loaded ${commands.size} modules`);
     startBot();
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`> V7 Web server running`));
-
-     sock.ev.on('connection.update', (update) => {
-         const { connection, lastDisconnect } = update
-         if(connection === 'close') {
-             console.log('> Bot disconnected. Reconnecting in 5s...')
-             setTimeout(() => {
-                 startBot()
-           }, 5000)
-       }
-
-} // <-- original closing bracket
-
+sock.ev.on('connection.update', (update) => {
+    const { connection, lastDisconnect } = update
+    if(connection === 'close') {
+        console.log('> Bot disconnected. Reconnecting in 5s...')
+        setTimeout(() => {
+            startBot()
+        }, 5000)
+    }
+})
