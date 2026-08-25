@@ -157,17 +157,15 @@ async function startBot() {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`> V7 Web server running`));
-Line 158:     // AUTO RECONNECT
-Line 159:     sock.ev.on('connection.update', (update) => {
-Line 160:         const { connection, lastDisconnect } = update
-Line 161:         if(connection === 'close') {
-Line 162:             console.log('> Bot disconnected. Reconnecting in 5s...')
-Line 163:             setTimeout(() => {
-Line 164:                 startBot()
-Line 165:             }, 5000)
-Line 166:         }
-Line 167:     })
-Line 168: 
-Line 169: } // <-- original closing bracket
 
-startBot();
+     sock.ev.on('connection.update', (update) => {
+         const { connection, lastDisconnect } = update
+         if(connection === 'close') {
+             console.log('> Bot disconnected. Reconnecting in 5s...')
+             setTimeout(() => {
+                 startBot()
+           }, 5000)
+       }
+
+} // <-- original closing bracket
+
