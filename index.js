@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import 'dotenv/config';
-import { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, delay, proto } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, DisconnectReason, Browsers, delay, proto } from '@whiskeysockets/baileys';
 import express from 'express';
 import chalk from 'chalk';
 
