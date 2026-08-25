@@ -113,12 +113,13 @@ function isSpamming(sender, commandName, cooldownMs) {
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('./session');
-    sock = makeWASocket({
-    auth: state,
-    browser: [BOT_NAME, "Desktop", VERSION],
-    printQRInTerminal: false,
-    logger: pino({ level: 'silent' })
-    sock.ev.on('creds.update', saveCreds);
+    sock = makeWASocket({ 
+    auth: state, 
+    browser: [BOT_NAME, "Desktop", VERSION], 
+    printQRInTerminal: false, 
+    logger: pino({ level: 'silent' }) 
+});
+sock.ev.on('creds.update', saveCreds);
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
         if(connection === 'open') console.log(chalk.green(`${BOT_NAME} ${VERSION} ULTIMATE Connected ✅`));
