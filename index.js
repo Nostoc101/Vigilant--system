@@ -24,7 +24,12 @@ const THEME = {
     line: `----------------------------------------`
 };
 
-const app = express();
+const app = express();    });
+}
+
+app.listen(process.env.PORT || 3000, () => console.log(`> V7 Web server running`));
+
+startBot();
 app.get('/', (req,res) => res.send(`${BOT_NAME} ${VERSION} ULTIMATE IS ONLINE ✅ by ${OWNER}`));
 
 const commands = new Map();
@@ -145,5 +150,14 @@ async function startBot() {
     });
 }
 
-(async () => { console.log(THEME.banner); await loadCommands(); console.log(`> V7 ULTIMATE: Loaded ${commands.size} modules`); startBot(); })();
-const PORT = process.env.PORT || 3000; app.listen(PORT, () => console.log(`> V7 Web server running`));
+(async () => {
+    console.log(THEME.banner);
+    await loadCommands();
+    console.log(`> V7 ULTIMATE: Loaded ${commands.size} modules`);
+    startBot();
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`> V7 Web server running`));
+
+startBot();
