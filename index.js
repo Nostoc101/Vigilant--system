@@ -125,7 +125,13 @@ sock.ev.on('creds.update', saveCreds);
         if(connection === 'open') console.log(chalk.green(`${BOT_NAME} ${VERSION} ULTIMATE Connected ✅`));
         if(connection === 'close') { if(lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut) startBot(); }
     });
-    if (!state.creds.registered) { await delay(2000); const code = await sock.requestPairingCode(PHONE_NUMBER); console.log(`\n🔑 V7 PAIRING CODE: ${code}\n`); }
+    if (!state.creds.registered) { await delay(2000); try {
+    const code = await sock.requestPairingCode(PHONE_NUMBER)
+    console.log(`🔑 V7 PAIRING CODE: ${code}`)
+} catch (e) {
+    console.log("Pairing failed, retrying in 5s...")
+    setTimeout(() => startBot(), 5000)
+}
     sock.ev.on('messages.upsert', async (m) => {
         const msg = m.messages[0]; if(!msg.message || msg.key.fromMe) return;
         const from = msg.key.remoteJid; const sender = msg.key.participant || from;
