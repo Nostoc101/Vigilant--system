@@ -120,6 +120,17 @@ async function startBot() {
     logger: pino({ level: 'silent' }) 
 });
 sock.ev.on('creds.update', saveCreds);
+sock.ev.on('connection.update', (update) => {
+    const { connection, lastDisconnect } = update
+    if(connection === 'open') {
+        console.log('✅ CONNECTED TO WHATSAPP')
+    }
+    if(connection === 'close') {
+        const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== 401
+        console.log('Connection closed. Reconnecting...', shouldReconnect)
+        if(shouldReconnect) startBot()
+    }
+})
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
         if(connection === 'open') console.log(chalk.green(`${BOT_NAME} ${VERSION} ULTIMATE Connected ✅`));
