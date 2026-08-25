@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import 'dotenv/config';
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, Browsers, delay, proto } from '@whiskeysockets/baileys';
+import pino from 'pino';
 import express from 'express';
 import chalk from 'chalk';
 
@@ -116,8 +117,7 @@ async function startBot() {
     auth: state,
     browser: [BOT_NAME, "Desktop", VERSION],
     printQRInTerminal: false,
-    logger: undefined // let baileys use default logger
-});
+    logger: logger: pino({ level: 'silent' })
     sock.ev.on('creds.update', saveCreds);
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
