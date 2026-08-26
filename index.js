@@ -92,14 +92,16 @@ async function startWhatsApp() {
     const sock = makeWASocket({ auth: state, printQRInTerminal: false, browser: ['NOSTOC-MD', 'Chrome', '1.0.0'] });
 
     if (!state.creds.registered && PHONE_NUMBER) {
-        setTimeout(async () => {
-            try {
-                let code = await sock.requestPairingCode(PHONE_NUMBER);
-console.log("📱 Trying to request pairing code for:", PHONE_NUMBER)
-                console.log('🔑 V7 PAIRING CODE:', code);
-            } catch (e) { console.log("Pairing error:", e.message) }
-        }, 3000)
-    }
+    setTimeout(async () => {
+        try {
+            console.log("📱 Trying to request pairing code for:", PHONE_NUMBER) // <-- MOVED UP
+            let code = await sock.requestPairingCode(PHONE_NUMBER);
+            console.log('🔑 V7 PAIRING CODE:', code);
+        } catch (e) { 
+            console.log("Pairing error:", e.message) 
+        }
+    }, 3000)
+}
 
     sock.ev.on('creds.update', saveCreds);
     sock.ev.on('connection.update', (update) => {
