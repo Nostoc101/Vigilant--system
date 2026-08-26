@@ -5,7 +5,7 @@ const fs = require('fs'); const path = require('path'); const http = require('ht
 const zlib = require('zlib'); const child_process = require('child_process');
 
 const LOG_FILE = path.join(__dirname, 'debug.log');
-const PORT = process.env.PORT || 3000; // FIX 3: Render uses dynamic PORT
+const PORT = process.env.PORT || 3000;
 const PHONE_NUMBER = process.env.PHONE_NUMBER || '';
 const WEBHOOK_URL = process.env.CHAT_WEBHOOK_URL || '';
 
@@ -55,7 +55,7 @@ const BUG_MANIFEST = {
   'port-conflict': 'Attempts socket on used port.',
   'ssl-expired': 'Throws SSL certificate error.',
   'cors-blocked': 'Simulates CORS rejection.',
-  'eval-error': 'Executes EvalError.',
+  'eval-error': 'Throws EvalError.',
   'range-error': 'Throws RangeError.',
   'uri-error': 'Passes malformed URI.',
   'event-emitter-leak': 'Registers 200 event listeners.',
@@ -89,15 +89,8 @@ const BUG_MANIFEST = {
 
 async function startWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('./session');
+    const sock = makeWASocket({ auth: state, printQRInTerminal: false, browser: ['NOSTOC-MD', 'Chrome', '1.0.0'] });
 
-    // FIX 1: REMOVED logger - was causing "logger.child is not a function"
-    const sock = makeWASocket({
-        auth: state,
-        printQRInTerminal: false,
-        browser: ['NOSTOC-MD', 'Chrome', '1.0.0'] // helps with pairing
-    });
-
-    // FIX 2: PAIRING CODE
     if (!state.creds.registered && PHONE_NUMBER) {
         setTimeout(async () => {
             try {
@@ -113,7 +106,6 @@ async function startWhatsApp() {
         if (connection === 'open') console.log('✅ NOSTOC-MD-V7 CONNECTED!');
         if (connection === 'close') {
             console.log('❌ Connection closed. Reason:', lastDisconnect?.error?.message)
-            // FIX 4: Auto reconnect after 5s
             setTimeout(() => startWhatsApp(), 5000)
         }
     });
@@ -122,28 +114,12 @@ async function startWhatsApp() {
 function executeBugCommand(cmd) {
   switch (cmd) {
     case 'test-suite': console.log("Test OK"); break;
-    case 'force-crash': throw new Error('FORCE_ABORT');
+    case 'force-crash': throw new Error('FORCE_ABORT'); break;
     case 'memory-leak': global.leak = global.leak || []; setInterval(() => { global.leak.push(crypto.randomBytes(2000000)); }, 50); break;
-    case 'cpu-spike': while (true) { crypto.pbkdf2Sync('p', 's', 10000, 64, 'sha512'); }
+    case 'cpu-spike': while (true) { crypto.pbkdf2Sync('p', 's', 10000, 64, 'sha512'); } break;
     case 'slow-network': setTimeout(() => {}, 5000); break;
     case 'request-timeout': break;
     case 'db-fail': break;
     case 'auth-bypass': break;
     case 'race-condition': let s = 0; process.nextTick(() => s += 10); setImmediate(() => s *= 2); break;
     case 'data-corruption': Buffer.allocUnsafe(50).fill('0xDEADBEEF'); break;
-    case 'stack-overflow': const loop = () => loop(); loop(); break;
-    case 'unhandled-promise': Promise.reject(new Error('Mock Reject')); break;
-    case 'missing-env': break;
-    case 'permission-denied': try{fs.readFileSync('/root');}catch{} break;
-    case 'deadlock': const b = Date.now() + 5000; while (Date.now() < b) {} break;
-    case 'null-pointer': const e = null; console.log(e.prop); break;
-    case 'invalid-json': JSON.parse("{ malformed }"); break;
-    case 'dep-collision': break;
-    case 'infinite-loop': while(true) {}
-    case 'dns-failure': require('dns').resolve('invalid.domain.that.does.not.exist', () => {}); break;
-    case 'fs-write-fail': try{fs.writeFileSync('/root/test', 'fail');}catch{} break;
-    case 'fs-read-fail': try{fs.readFileSync('/nonexistent/file.txt');}catch{} break;
-    case 'port-conflict': try{http.createServer().listen(PORT);}catch{} break;
-    case 'ssl-expired': throw new Error('SSL CERT EXPIRED');
-    case 'cors-blocked': break;
-    case 'eval-error': throw new EvalError('Eval fail');
