@@ -95,6 +95,7 @@ async function startWhatsApp() {
         setTimeout(async () => {
             try {
                 let code = await sock.requestPairingCode(PHONE_NUMBER);
+console.log("📱 Trying to request pairing code for:", PHONE_NUMBER)
                 console.log('🔑 V7 PAIRING CODE:', code);
             } catch (e) { console.log("Pairing error:", e.message) }
         }, 3000)
